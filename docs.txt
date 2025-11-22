@@ -1,0 +1,100 @@
+type Block struct 
+    -> What is it ?
+        -> Represents a single unit of storage
+        -> This basically defines the structure that a particular block will have
+        -> The block holds the following 3 things:
+            1. Previous block hash 
+            2. Data 
+            3. Current block's hash
+
+type Block struct 
+    -> A container that holds an ordered sequence of blocks
+    -> Uses a Golang slice ([]*Block) to keep the blocks in order
+
+Cryptographic Hashing (How?)
+    
+    func (b* Block) DeriveHash()
+        -> Logic: 
+            -> This method combines the block's unique Data and the previous hash into a single byte 
+               slice using bytes.Join. It then feeds this combined data into the SHA-256 algorithm (sha256.sum256)
+            
+            -> This creates immutability of the blockchain. If you change the data in block 1 it's hash changes. Because 
+               block 2 stores block 1's hash as prevHash the block 2's hash also changes. This ripple effect alerts the network
+               to data tampering
+
+Chain Management:
+The code implements the specific functions to manage the lifecycle of the chain
+    -> Genesis():
+        -> A blockchain being a chain of blocks the first block has nothing to point to with respect to the previous blocks. This function 
+        basically hardcodes the block data with Genesis and an empty byte slice for the previous hash. It bootstraps the system.
+    
+    -> CreateBlock and AddBlock functions:
+        -> AddBlock looks at the current end of the chain (chain.blocks[len-1]) to get the latest hash 
+        -> It passes this hash and the new data to createBlock
+        -> CreateBlock function builds the struct of the new block by getting the data and the previous hash as the arguments and then calling the 
+        DeriveHash() function to generate the hash of current block
+        -> This function returns a block and then appends it to the current list/array/chain of blocks
+
+Execution Flow
+    -> When the main() runs:
+        -> InitBlockChain() is called:
+            -> It runs the Genesis() function creating the first block
+            -> It then returns a blockchain that currently contains the first block 
+            
+        -> You start to populate the data by calling the AddBlock function
+            -> Block 1 is created from the hash of the genesis 
+            -> then block 2 from block 1 
+            -> then block 3 from block 1 
+        
+        -> You loop through the chain and print the previous hash, data, and the current hash
+
+------------ 2nd Phase ----------------
+
+-> Implementation of proof of work: 
+    -> In the first phase adding the block was instant and really just needed the DeriveHash() function
+    but if it is this easy to add a block then any attacker could do it. 
+    -> This is why ProofOfWork is implemented which involved solving a difficult math puzzle to add a block
+    which makes a block expensive in terms of CPU power and time which in turn secures the network
+
+-> Block and blockchain structs are moved to block.go
+-> PoW logic lives in proof.go
+-> main.go purely acts as just an entry point
+
+-> Core ProofOfWork Logic
+    -> Goal: Find a hash for the block that starts with a specific number of zeros
+    -> Constraint: You cannot change the block's data or the previous hash
+    -> Varaible: We introduce a new field called Nonce (Number used ONCE)
+    
+    -> target.Lsh(target, unit(256-difficult))
+        -> This uses a left shift operation. Imagine a target number that looks like this in binary: 00001000... 
+        Any hash we generate must be smaller than this number. The smaller the target, the harder it is to find a 
+        matching hash (because you need more leading zeros).
+
+-> Mining Loop ('The Work'):
+    -> Flow: 
+        -> Prepare data: Combine prevHash + Data + Nonce + difficult
+        -> Generate a SHA-256 hash of that combined data
+        -> Compare: Convert the hash to a bigInt
+            -> hash < target ? Success we found the golden Nonce stop the loop : Failure increment the nonce by 1 and start from step 1
+    -> Why is this important: 
+        -> this loop is mining -> it might run millions of times before finding the right hash
+
+-> Validate (): 
+    -> Why: 
+        -> Mining takes a long time but verification should be instant
+    -> How: 
+        -> Once the miner finds the nonce anyone can take that nonce, run the hash once and see if it meets the target
+            -> This prepares the blockchain for a decentralized network where the nodes need to quickly trust the blocks sent by others wihtout
+            remining them
+        
+-> Final flow after 2nd phase: 
+    AddBlock("Data") in main.go -> Creates a block with data and the previous hash -> (Mining) NewProof(block) calculates the target based on difficulty ->
+    pow.Run() starts the loop -> It starts trying from Nonce 0 -> Hash Fail -> Tries with Nonce 1 -> Hash Fail ..... -> Eg: Nonce 1245 -> Hash starts with 0000 -> 
+    Success! -> The block is saved with that specific Nonce and the resulting hash -> Output terminal shows PoW : true
+
+-> Why is this crucial for the project ? 
+    -> Without this the blockchain is just a fancy linked list
+    -> With this is becomes a secure digital ledger
+    -> The work that is required to change the hash makes the blockcain immutable
+    -> If the hacker wants to change the 'Work' for block1 then he has to change the work for block2 and block3 and so on....which is computationally impossible
+    
