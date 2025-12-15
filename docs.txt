@@ -98,3 +98,27 @@ Execution Flow
     -> The work that is required to change the hash makes the blockcain immutable
     -> If the hacker wants to change the 'Work' for block1 then he has to change the work for block2 and block3 and so on....which is computationally impossible
     
+-------------- Addition of Badger DB ------------------
+The code introduces persistance using a database (BadgerDB). When you close the program the blocks are now saved to the harddrive
+when you open it again, it remebers history
+
+Serialization:
+    -> Serialize() and Deserialize()
+        -> Serialize: takes the Block struct and flattens it into a byte array
+        -> Deserialize: takes the byte array from DB and inflates it back into a readable block
+DB integration:
+    -> Key - blcok's hash 
+    -> value - serialized block data
+    -> we use a special key "lh" to store the hash of the newest block
+
+-> Flow:
+    Startup(InitBlockChain) -> checks database -> if empty creates genesis and saves it while setting lh to the genesis hash -> 
+    if exists -> read "lh" to find the tip of the chain
+    Add a Block (AddBlock) -> grabs stored hash in lh -> mines new block pointing to the hash -> saves the new block -> updates the "lh"
+
+---------------------------Entire Flow ------------------------------------
+User Input: You type go run main.go add -block "New Transaction". -> Validation: The CLI checks if you used the right commands.
+-> Initialization: InitBlockChain opens the folder ./tmp/blocks. It finds the "lh" key to see where we left off.
+Processing: -> The system creates a new block. -> Proof of Work (from Part 2) runs to find the nonce. -> The block is Serialized into bytes.
+-> The bytes are saved to BadgerDB.
+Persistence: The program updates "lh" and closes. The data is now safe on the disk.

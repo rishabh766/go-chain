@@ -9,7 +9,7 @@ import (
 	"math/big"
 )
 
-const Difficulty = 12 // in real blockchain the difficulty increases over time here it is static for demo
+const Difficulty = 12
 
 type ProofOfWork struct {
 	Block  *Block
@@ -27,7 +27,7 @@ func (pow *ProofOfWork) InitData(nonce int) []byte {
 	data := bytes.Join(
 		[][]byte{
 			pow.Block.PrevHash,
-			pow.Block.Data,
+			pow.Block.HashTransactions(), // Changed from pow.Block.Data
 			ToHex(int64(nonce)),
 			ToHex(int64(Difficulty)),
 		},
@@ -43,9 +43,10 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 
 	for nonce < math.MaxInt64 {
 		data := pow.InitData(nonce)
-		hash := sha256.Sum256(data)
+		hash = sha256.Sum256(data)
 		fmt.Printf("\r%x", hash)
 		hashInt.SetBytes(hash[:])
+
 		if hashInt.Cmp(pow.Target) == -1 {
 			break
 		} else {
@@ -61,10 +62,7 @@ func (pow *ProofOfWork) Validate() bool {
 	data := pow.InitData(pow.Block.Nonce)
 	hash := sha256.Sum256(data)
 	hashInt.SetBytes(hash[:])
-
-	isValid := hashInt.Cmp(pow.Target) == -1
-
-	return isValid
+	return hashInt.Cmp(pow.Target) == -1
 }
 
 func ToHex(num int64) []byte {
