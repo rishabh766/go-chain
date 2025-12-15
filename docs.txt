@@ -98,6 +98,7 @@ Execution Flow
     -> The work that is required to change the hash makes the blockcain immutable
     -> If the hacker wants to change the 'Work' for block1 then he has to change the work for block2 and block3 and so on....which is computationally impossible
     
+----------PHASE 3---------------
 -------------- Addition of Badger DB ------------------
 The code introduces persistance using a database (BadgerDB). When you close the program the blocks are now saved to the harddrive
 when you open it again, it remebers history
@@ -122,3 +123,55 @@ User Input: You type go run main.go add -block "New Transaction". -> Validation:
 Processing: -> The system creates a new block. -> Proof of Work (from Part 2) runs to find the nonce. -> The block is Serialized into bytes.
 -> The bytes are saved to BadgerDB.
 Persistence: The program updates "lh" and closes. The data is now safe on the disk.
+
+------------- PHASE 4 ----------------
+---------------------------------------------------------------------------
+ADDING TRANSACTIONS
+
+-> The code removes the Data field and replaces it with Transactions. This introduces UTXO(unspent transaction output)
+which is the same logic that BTC uses
+
+TxOutput : represents the "Value". It has a Value and PubKey field
+TxInput : represents "Spending". It references a previous output ID and provides a Sig to unlock it
+
+CoinBaseTx: This is the first transaction in the block. It has no inputs as it mines for the money
+
+----------Finding the money in the blockchain ----------------
+-> To send money you must find where is it hiding in the BC
+-> FindUnspentTransactions:
+    -> iterates backward through the blockchain using the iterator
+    -> looks for the TxOutput that are logged with your name
+    -> It checks if the output has already been referenced by a TxInput in a newer block. If it has it is spent, else it is unspent
+
+-> FindSpendableOutput:
+    -> It calls the function above and keeps adding up the values until it reaches that amount that you want to spend
+    -> It returns the specific IDs of the transactions that you need to 'break' to pay for your transfer
+
+CREATING A TRANSACTION
+    -> On running the command send -from John -to Alice -amount 10 the following process happens: 
+        -> Check Balance: IT calls the FindSpendableOutput. If the accumulated amount < spending amount it panics (returns error)
+        -> Create Inputs: It creates inputs referencing the 'money piles'
+        -> Create Outputs: Pays Alice, Pays John back the remainder
+
+---------------FLOW----------------
+-> run the command: go run main.go send -from John to Alice -amount 50
+-> The code scans the DB. It finds John has the Genesis reward of 100 coins that are unspent
+-> It refers to the Genesis Transaction ID (value 100)
+-> 50 coins to Alice
+-> 50 coins back to John
+-> This new transaction is wrapped in a block. The proof of work algo mines this block 
+-> The block is saved to badgerDB
+-> John's 100 coin is considered output and 2 new 50 coin outputs are created. 
+
+-----------PHASE 5------------
+-----------ADDING A WALLET MODULE-------------
+Implementation flow -> Refactoring -> The wallet -> Addresses -> Persistance -> CLI
+
+1) Move the CLI into its own package
+2) Ensure TXOutput and TxInput structures are in their own files
+
+Wallet in cyrpto holds a private key and public key 
+
+wallet.go -> contains the wallet struct and the function to generate the keys. 
+
+
